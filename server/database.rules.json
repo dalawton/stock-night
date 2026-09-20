@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "drinks": {
+      ".read": true,
+      ".write": false
+    },
+    "drinkHistory": {
+      ".read": true,
+      ".write": false
+    },
+    "auditLog": {
+      ".read": false,
+      ".write": false
+    },
+    "listPriceChanges": {
+      ".read": false,
+      ".write": false
+    },
+    "wholesalePriceChanges": {
+      ".read": false,
+      ".write": false
+    },
+    "staff": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
