@@ -9,7 +9,7 @@ const DECAY_PCT = Number(process.env.DECAY_PCT ?? 0.05); // per tick, toward lis
  */
 export function applySale(drink) {
   const raw = drink.currentPrice + drink.listPrice * BUMP_PCT;
-  const { price, floor, ceiling, hitCeiling } = clampToLegalRange(raw, drink.listPrice);
+  const { price, floor, ceiling, hitCeiling } = clampToLegalRange(raw, drink.listPrice, drink.wholesalePrice);
   return {
     price,
     floor,
@@ -26,7 +26,7 @@ export function applySale(drink) {
 export function applyDecayTick(drink) {
   const gap = drink.listPrice - drink.currentPrice;
   const raw = drink.currentPrice + gap * DECAY_PCT;
-  const { price, floor, ceiling, hitFloor } = clampToLegalRange(raw, drink.listPrice);
+  const { price, floor, ceiling, hitFloor } = clampToLegalRange(raw, drink.listPrice, drink.wholesalePrice);
   return {
     price,
     floor,
@@ -41,7 +41,7 @@ export function applyDecayTick(drink) {
  * or to start the night clean).
  */
 export function applyReset(drink) {
-  const { price, floor, ceiling } = clampToLegalRange(drink.listPrice, drink.listPrice);
+  const { price, floor, ceiling } = clampToLegalRange(drink.listPrice, drink.listPrice, drink.wholesalePrice);
   return { price, floor, ceiling, cause: "reset" };
 }
 

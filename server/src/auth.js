@@ -4,7 +4,7 @@
 // (createStaff.js) without needing the user to get a fresh token via a
 // separate claims-refresh flow.
 import admin from "firebase-admin";
-import { httpError } from "../server/src/errors.js";
+import { httpError } from "./errors.js";
 
 const ROLE_RANK = { bartender: 1, manager: 2 };
 

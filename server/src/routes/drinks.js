@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { getStore } from "../store.js";
 import { priceChangePct } from "../pricingEngine.js";
-import { requireAuth } from "../../auth.js";
+import { clampToLegalRange } from "../complianceRules.js";
+import { requireAuth } from "../auth.js";
 import { asyncHandler, httpError } from "../errors.js";
 
 export const drinksRouter = Router();
@@ -24,10 +25,10 @@ drinksRouter.get("/:id/history", asyncHandler(async (req, res) => {
 
 drinksRouter.post("/", requireAuth("manager"), asyncHandler(async (req, res) => {
   const { name, category, listPrice, wholesalePrice } = req.body;
-  if (!name || !listPrice || listPrice <= 0) {
+  if (!name || !name.trim() || typeof listPrice !== "number" || !(listPrice > 0)) {
     throw httpError(400, "name and a positive listPrice are required");
   }
-  if (wholesalePrice != null && (wholesalePrice < 0 || wholesalePrice >= listPrice)) {
+  if (wholesalePrice != null && (typeof wholesalePrice !== "number" || wholesalePrice < 0 || wholesalePrice >= listPrice)) {
     throw httpError(400, "wholesalePrice must be a non-negative number less than listPrice");
   }
   const store = await getStore();
@@ -83,5 +84,6 @@ drinksRouter.delete("/:id", requireAuth("manager"), asyncHandler(async (req, res
 }));
 
 function withDerived(drink) {
-  return { ...drink, changePct: priceChangePct(drink) };
+  const { floor, ceiling, floorSource } = clampToLegalRange(drink.currentPrice, drink.listPrice, drink.wholesalePrice);
+  return { ...drink, changePct: priceChangePct(drink), floor, ceiling, floorSource };
 }

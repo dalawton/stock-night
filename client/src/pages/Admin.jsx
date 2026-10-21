@@ -16,8 +16,12 @@ export default function Admin() {
   const [warning, setWarning] = useState(null);
 
   const refresh = useCallback(async () => {
-    const list = await api.listDrinks();
-    setDrinks(list);
+    try {
+      setDrinks(await api.listDrinks());
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
     if (isManager) {
       try {
         setAudit(await api.auditLog(50));
@@ -60,21 +64,22 @@ export default function Admin() {
     }
   }
 
-  async function handleReset(id) {
-    await api.reset(id);
-    refresh();
+  async function run(action) {
+    setError(null);
+    try {
+      await action();
+      refresh();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  async function handleToggleActive(drink) {
-    await api.setActive(drink.id, !drink.active);
-    refresh();
-  }
-
-  async function handleDelete(id) {
+  const handleReset = (id) => run(() => api.reset(id));
+  const handleToggleActive = (drink) => run(() => api.setActive(drink.id, !drink.active));
+  const handleDelete = (id) => {
     if (!confirm("Remove this drink permanently?")) return;
-    await api.deleteDrink(id);
-    refresh();
-  }
+    return run(() => api.deleteDrink(id));
+  };
 
   function startEdit(drink) {
     setEditingId(drink.id);
@@ -213,8 +218,8 @@ export default function Admin() {
                   </>
                 )}
                 <td>${d.currentPrice.toFixed(2)}</td>
-                <td title={d.wholesalePrice > d.listPrice * 0.5 ? "cost floor" : "50% legal floor"}>
-                  ${Math.max(d.listPrice * 0.5, d.wholesalePrice || 0).toFixed(2)}
+                <td title={d.floorSource === "cost" ? "cost floor" : "legal floor"}>
+                  ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}
                 </td>
                 <td className={d.changePct >= 0 ? "is-up" : "is-down"}>
                   {d.changePct >= 0 ? "▲" : "▼"} {Math.abs(d.changePct)}%

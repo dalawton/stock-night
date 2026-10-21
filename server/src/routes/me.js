@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../../auth.js";
+import { requireAuth } from "../auth.js";
 
 export const meRouter = Router();
 

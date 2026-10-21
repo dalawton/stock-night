@@ -199,6 +199,18 @@ wake Render up, and seed a few drinks via `/admin` so the board isn't empty.
   its local default when you last ran `npm run deploy`. `VITE_*` values are
   baked into the build at build time — editing `.env` alone doesn't update
   an already-deployed site; you have to rebuild and redeploy.
+- **Server crashes a few seconds after the first sale.** The decay loop was
+  calling a store method that doesn't exist (`updateDrinkPrice`). It now
+  calls `store.applyDecay(id)`, which both stores implement (on Firebase it
+  runs in a transaction so decay can't overwrite a simultaneous sale).
+- **`Failed to resolve import "firebase/app"` on `npm run dev`/`build`.**
+  `firebase` is a client dependency; run `npm install` in `client/` (it's now
+  listed in `client/package.json`).
+- **Cost floor wasn't being applied.** The pricing engine now passes
+  `wholesalePrice` into the clamp, so the effective floor really is
+  `max(50% of list, wholesale)` as described above. The API returns the
+  computed `floor`/`ceiling`, and the UI displays that rather than
+  recomputing it.
 - **A file named `firebase.js` ends up in `server/src/` instead of
   `client/src/`.** These are two different files with the same name and
   very different jobs — the client one holds public web config for the

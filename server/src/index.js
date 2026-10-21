@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
-import { meRouter } from "./routes/me.js";
 import cors from "cors";
+import { meRouter } from "./routes/me.js";
 import { drinksRouter } from "./routes/drinks.js";
 import { auditRouter } from "./routes/admin.js";
 import { startDecayLoop } from "./decayLoop.js";
@@ -16,16 +16,19 @@ app.use("/api/drinks", drinksRouter);
 app.use("/api/audit", auditRouter);
 app.use("/api/me", meRouter);
 
+app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
+
+// Must come after the routes and before listen().
+app.use((err, req, res, next) => {
+  if (err.status) return res.status(err.status).json({ error: err.message });
+  console.error(err);
+  res.status(500).json({ error: "Server error" });
+});
+
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, async () => {
   await getStore(); // logs which backend it picked
   startDecayLoop(getStore);
   console.log(`[server] Stock Night API running on http://localhost:${PORT}`);
-});
-
-app.use((err, req, res, next) => {
-  if (err.status) return res.status(err.status).json({ error: err.message });
-  console.error(err);
-  res.status(500).json({ error: "Server error" });
 });

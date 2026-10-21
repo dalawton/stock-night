@@ -1,13 +1,16 @@
 import admin from "firebase-admin";
 import { nanoid } from "nanoid";
 import { applySale, applyDecayTick, applyReset } from "./pricingEngine.js";
-import { checkReferencePriceChange, validatePricing } from "./complianceRules.js";
+import { checkReferencePriceChange, validatePricing, clampToLegalRange } from "./complianceRules.js";
 import { httpError } from "./errors.js";
 
 let db = null;
 
 export function initFirebase() {
-  if (admin.apps.length) return admin.database();
+  if (admin.apps.length) {
+    db = admin.database();
+    return db;
+  }
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
@@ -142,7 +145,7 @@ export const firebaseStore = {
     ]);
 
     const ref = db.ref(`drinks/${id}`);
-    let oldListPrice, oldWholesalePrice, listChanged, wholesaleChanged;
+    let oldListPrice, oldWholesalePrice, listChanged, wholesaleChanged, priceClamped;
 
     const { committed, snapshot } = await ref.transaction((drink) => {
       if (drink === null) return drink;
@@ -153,10 +156,16 @@ export const firebaseStore = {
       validatePricing({ listPrice: nextListPrice, wholesalePrice: nextWholesalePrice });
       listChanged = listPrice != null && listPrice !== drink.listPrice;
       wholesaleChanged = wholesalePrice != null && wholesalePrice !== drink.wholesalePrice;
-      return { ...drink, listPrice: nextListPrice, wholesalePrice: nextWholesalePrice };
+      // The floor/ceiling just moved - pull the live price back inside them.
+      const { price } = clampToLegalRange(drink.currentPrice, nextListPrice, nextWholesalePrice);
+      priceClamped = price !== drink.currentPrice;
+      return { ...drink, listPrice: nextListPrice, wholesalePrice: nextWholesalePrice, currentPrice: price };
     });
 
     if (!committed || !snapshot.exists()) throw httpError(404, "Drink not found");
+    if (priceClamped) {
+      await db.ref(`drinkHistory/${id}`).push({ ts: Date.now(), price: snapshot.val().currentPrice, cause: "pricing_change" });
+    }
 
     const warnings = [];
     if (listChanged) {
@@ -202,6 +211,8 @@ export const firebaseStore = {
     const drink = (await db.ref(`drinks/${id}`).get()).val();
     await db.ref(`drinks/${id}`).remove();
     await db.ref(`drinkHistory/${id}`).remove();
+    await db.ref(`listPriceChanges/${id}`).remove();
+    await db.ref(`wholesalePriceChanges/${id}`).remove();
     if (drink) await appendAudit({ type: "delete_drink", drinkId: id, name: drink.name });
   },
 

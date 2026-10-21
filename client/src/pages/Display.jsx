@@ -8,14 +8,27 @@ export default function Display() {
   const [drinks, setDrinks] = useState([]);
   const [histories, setHistories] = useState({});
   const [now, setNow] = useState(new Date());
+  const [offline, setOffline] = useState(false);
 
+  // A failed poll (server cold-starting, wifi blip) must not blank the TV -
+  // keep showing the last good prices and just flag that we're reconnecting.
   const refresh = useCallback(async () => {
-    const list = await api.listDrinks();
-    setDrinks(list.filter((d) => d.active));
-    const entries = await Promise.all(
-      list.map(async (d) => [d.id, await api.history(d.id)])
-    );
-    setHistories(Object.fromEntries(entries));
+    try {
+      const list = await api.listDrinks();
+      const active = list.filter((d) => d.active);
+      setDrinks(active);
+      const entries = await Promise.all(
+        active.map(async (d) => [d.id, await api.history(d.id).catch(() => null)])
+      );
+      setHistories((prev) => {
+        const next = { ...prev };
+        for (const [id, h] of entries) if (h) next[id] = h;
+        return next;
+      });
+      setOffline(false);
+    } catch {
+      setOffline(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -35,7 +48,10 @@ export default function Display() {
           <span className="display__brand-mark">STOCK NIGHT</span>
           <span className="display__brand-sub">live drink exchange</span>
         </div>
-        <div className="display__clock">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+        <div className="display__clock">
+          {offline && <span title="Can't reach the server - showing last known prices"> reconnecting… </span>}
+          {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </div>
       </header>
 
       <TickerTape drinks={drinks} />
@@ -59,7 +75,7 @@ export default function Display() {
               height={48}
               color={d.changePct >= 0 ? "var(--up)" : "var(--down)"}
             />
-            <div className="board__floor">floor ${Math.max(d.listPrice * 0.5, d.wholesalePrice || 0).toFixed(2)}</div>
+            <div className="board__floor">floor ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}</div>
           </article>
         ))}
         {drinks.length === 0 && (

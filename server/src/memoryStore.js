@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { applySale, applyDecayTick, applyReset } from "./pricingEngine.js";
-import { checkReferencePriceChange, validatePricing } from "./complianceRules.js";
+import { checkReferencePriceChange, validatePricing, clampToLegalRange } from "./complianceRules.js";
 import { httpError } from "./errors.js";
 
 // Node is single-threaded and this store does no I/O between reading and
@@ -111,6 +111,13 @@ export const memoryStore = {
     const oldWholesalePrice = drink.wholesalePrice;
     drink.listPrice = nextListPrice;
     drink.wholesalePrice = nextWholesalePrice;
+
+    // The floor/ceiling just moved - pull the live price back inside them.
+    const { price: clampedPrice } = clampToLegalRange(drink.currentPrice, drink.listPrice, drink.wholesalePrice);
+    if (clampedPrice !== drink.currentPrice) {
+      drink.currentPrice = clampedPrice;
+      pushHistory(drink, { price: clampedPrice, cause: "pricing_change" });
+    }
 
     appendAudit({
       type: "pricing_change",
