@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../authContext";
 
 export default function Login() {
-  const { login, error } = useAuth();
+  const { login, error, user, role, loading, firebaseConfigured } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -19,12 +21,22 @@ export default function Login() {
     }
   }
 
+  // Already signed in (or just did): go where they were headed, or to the
+  // page that suits their role.
+  if (!firebaseConfigured) return <Navigate to="/admin" replace />;
+  if (!loading && user && role) {
+    const home = role === "display" ? "/display" : "/admin";
+    const from = location.state?.from;
+    const dest = from && (role !== "display" || from === "/display") ? from : home;
+    return <Navigate to={dest} replace />;
+  }
+
   return (
     <div className="login">
       <form className="login__card" onSubmit={handleSubmit}>
         <h1>Staff sign in</h1>
         <p className="admin__subtitle">
-          Ask a manager to add your account with <code>scripts/createStaff.js</code> if you don't have one yet.
+          Sign in to view the board or use the dashboard.
         </p>
         {error && <div className="banner banner--error">{error}</div>}
         <input

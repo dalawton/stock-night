@@ -16,11 +16,11 @@ function init() {
 async function main() {
   const [, , email, password, role] = process.argv;
   if (!email || !password || !role) {
-    console.error("Usage: node scripts/createStaff.js <email> <password> <bartender|manager>");
+    console.error("Usage: node scripts/createStaff.js <email> <password> <display|bartender|manager>");
     process.exit(1);
   }
-  if (!["bartender", "manager"].includes(role)) {
-    console.error("Role must be 'bartender' or 'manager'");
+  if (!["display", "bartender", "manager"].includes(role)) {
+    console.error("Role must be 'display', 'bartender' or 'manager'");
     process.exit(1);
   }
   if (!process.env.FIREBASE_PROJECT_ID) {

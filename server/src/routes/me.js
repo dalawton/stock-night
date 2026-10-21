@@ -3,6 +3,6 @@ import { requireAuth } from "../auth.js";
 
 export const meRouter = Router();
 
-meRouter.get("/", requireAuth("bartender"), (req, res) => {
+meRouter.get("/", requireAuth("display"), (req, res) => {
   res.json(req.user);
 });

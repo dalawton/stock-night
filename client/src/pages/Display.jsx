@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "../api";
 import Sparkline from "../components/Sparkline";
 import TickerTape from "../components/TickerTape";
-import { rtdb, firebaseConfigured } from "../firebase";
 
 export default function Display() {
   const [drinks, setDrinks] = useState([]);
@@ -17,14 +16,8 @@ export default function Display() {
       const list = await api.listDrinks();
       const active = list.filter((d) => d.active);
       setDrinks(active);
-      const entries = await Promise.all(
-        active.map(async (d) => [d.id, await api.history(d.id).catch(() => null)])
-      );
-      setHistories((prev) => {
-        const next = { ...prev };
-        for (const [id, h] of entries) if (h) next[id] = h;
-        return next;
-      });
+      const all = await api.allHistory().catch(() => null);
+      if (all) setHistories(all);
       setOffline(false);
     } catch {
       setOffline(true);
@@ -49,7 +42,7 @@ export default function Display() {
           <span className="display__brand-sub">live drink exchange</span>
         </div>
         <div className="display__clock">
-          {offline && <span title="Can't reach the server - showing last known prices"> reconnecting… </span>}
+          {offline && <span className="display__offline">reconnecting…</span>}
           {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </header>
@@ -58,24 +51,22 @@ export default function Display() {
 
       <div className="board">
         {drinks.map((d) => (
-          <article className="board__card" key={d.id}>
+          <article className={`board__card ${d.changePct >= 0 ? "is-up" : "is-down"}`} key={d.id}>
             <div className="board__row-top">
               <h2 className="board__name">{d.name}</h2>
               <span className="board__category">{d.category}</span>
             </div>
             <div className="board__price-row">
-              <span className="board__price">${d.currentPrice.toFixed(2)}</span>
+              <span className="board__price" key={d.currentPrice}>${d.currentPrice.toFixed(2)}</span>
               <span className={`board__change ${d.changePct >= 0 ? "is-up" : "is-down"}`}>
                 {d.changePct >= 0 ? "▲" : "▼"} {Math.abs(d.changePct)}%
               </span>
             </div>
             <Sparkline
               history={histories[d.id]}
-              width={220}
-              height={48}
+              fallbackPrice={d.currentPrice}
               color={d.changePct >= 0 ? "var(--up)" : "var(--down)"}
             />
-            <div className="board__floor">floor ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}</div>
           </article>
         ))}
         {drinks.length === 0 && (

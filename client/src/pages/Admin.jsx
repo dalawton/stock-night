@@ -157,14 +157,15 @@ export default function Admin() {
 
       <section className="panel">
         <h2>Drinks</h2>
+        <div className="table-wrap">
         <table className="drink-table">
           <thead>
             <tr>
               <th>Name</th>
               <th>List</th>
-              <th>Wholesale</th>
+              {isManager && <th>Wholesale</th>}
               <th>Current</th>
-              <th>Floor</th>
+              {isManager && <th>Floor</th>}
               <th>Change</th>
               <th>Sales</th>
               <th>Status</th>
@@ -214,13 +215,15 @@ export default function Admin() {
                         <span>${d.listPrice.toFixed(2)}</span>
                       )}
                     </td>
-                    <td>{d.wholesalePrice ? `$${d.wholesalePrice.toFixed(2)}` : "—"}</td>
+                    {isManager && <td>{d.wholesalePrice ? `$${d.wholesalePrice.toFixed(2)}` : "—"}</td>}
                   </>
                 )}
                 <td>${d.currentPrice.toFixed(2)}</td>
-                <td title={d.floorSource === "cost" ? "cost floor" : "legal floor"}>
-                  ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}
-                </td>
+                {isManager && (
+                  <td title={d.floorSource === "cost" ? "cost floor" : "legal floor"}>
+                    ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}
+                  </td>
+                )}
                 <td className={d.changePct >= 0 ? "is-up" : "is-down"}>
                   {d.changePct >= 0 ? "▲" : "▼"} {Math.abs(d.changePct)}%
                 </td>
@@ -248,13 +251,14 @@ export default function Admin() {
             ))}
             {drinks.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-row">
+                <td colSpan={isManager ? 9 : 7} className="empty-row">
                   No drinks yet — add one above.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       {isManager && (

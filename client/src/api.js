@@ -26,6 +26,7 @@ export const api = {
   me: () => request("/me"),
   listDrinks: () => request("/drinks"),
   createDrink: (data) => request("/drinks", { method: "POST", body: JSON.stringify(data) }),
+  allHistory: () => request("/drinks/history"),
   history: (id) => request(`/drinks/${id}/history`),
   recordSale: (id) => request(`/drinks/${id}/sale`, { method: "POST" }),
   reset: (id) => request(`/drinks/${id}/reset`, { method: "POST" }),

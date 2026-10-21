@@ -1,11 +1,11 @@
 {
   "rules": {
     "drinks": {
-      ".read": true,
+      ".read": false,
       ".write": false
     },
     "drinkHistory": {
-      ".read": true,
+      ".read": false,
       ".write": false
     },
     "auditLog": {

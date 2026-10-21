@@ -7,15 +7,24 @@ import { asyncHandler, httpError } from "../errors.js";
 
 export const drinksRouter = Router();
 
-// Reads are public/unauthenticated on purpose — the display board is a TV
-// over the bar, nobody's logging in to look at it.
-drinksRouter.get("/", asyncHandler(async (req, res) => {
+// Everything - reads included - requires a signed-in staff account. The TV
+// signs in with a read-only "display" account.
+drinksRouter.get("/", requireAuth("display"), asyncHandler(async (req, res) => {
   const store = await getStore();
   const drinks = await store.listDrinks();
-  res.json(drinks.map(withDerived));
+  res.json(drinks.map((d) => withDerived(d, req.user.role)));
 }));
 
-drinksRouter.get("/:id/history", asyncHandler(async (req, res) => {
+// All price histories in one request (the board used to make one request per
+// drink every few seconds). Must be registered before the /:id routes.
+drinksRouter.get("/history", requireAuth("display"), asyncHandler(async (req, res) => {
+  const store = await getStore();
+  const drinks = await store.listDrinks();
+  const entries = await Promise.all(drinks.map(async (d) => [d.id, await store.getHistory(d.id)]));
+  res.json(Object.fromEntries(entries));
+}));
+
+drinksRouter.get("/:id/history", requireAuth("display"), asyncHandler(async (req, res) => {
   const store = await getStore();
   const history = await store.getHistory(req.params.id);
   res.json(history);
@@ -33,19 +42,19 @@ drinksRouter.post("/", requireAuth("manager"), asyncHandler(async (req, res) => 
   }
   const store = await getStore();
   const drink = await store.createDrink({ name, category, listPrice, wholesalePrice });
-  res.status(201).json(withDerived(drink));
+  res.status(201).json(withDerived(drink, req.user.role));
 }));
 
 drinksRouter.post("/:id/sale", requireAuth("bartender"), asyncHandler(async (req, res) => {
   const store = await getStore();
   const { drink, hitCeiling } = await store.recordSale(req.params.id);
-  res.json({ ...withDerived(drink), hitCeiling });
+  res.json({ ...withDerived(drink, req.user.role), hitCeiling });
 }));
 
 drinksRouter.post("/:id/reset", requireAuth("manager"), asyncHandler(async (req, res) => {
   const store = await getStore();
   const drink = await store.resetPrice(req.params.id);
-  res.json(withDerived(drink));
+  res.json(withDerived(drink, req.user.role));
 }));
 
 // Updates listPrice and/or wholesalePrice together — send only the field(s)
@@ -67,14 +76,14 @@ drinksRouter.patch("/:id/pricing", requireAuth("manager"), asyncHandler(async (r
     reason,
     actor: req.user.email || req.user.uid,
   });
-  res.json({ ...withDerived(drink), warning });
+  res.json({ ...withDerived(drink, req.user.role), warning });
 }));
 
 drinksRouter.post("/:id/active", requireAuth("manager"), asyncHandler(async (req, res) => {
   const { active } = req.body;
   const store = await getStore();
   const drink = await store.setActive(req.params.id, Boolean(active));
-  res.json(withDerived(drink));
+  res.json(withDerived(drink, req.user.role));
 }));
 
 drinksRouter.delete("/:id", requireAuth("manager"), asyncHandler(async (req, res) => {
@@ -83,7 +92,14 @@ drinksRouter.delete("/:id", requireAuth("manager"), asyncHandler(async (req, res
   res.status(204).end();
 }));
 
-function withDerived(drink) {
-  const { floor, ceiling, floorSource } = clampToLegalRange(drink.currentPrice, drink.listPrice, drink.wholesalePrice);
-  return { ...drink, changePct: priceChangePct(drink), floor, ceiling, floorSource };
+// Cost and floor are manager-only: they're stripped here, on the server, so a
+// bartender (or anyone watching network traffic on the TV) never receives them.
+function withDerived(drink, role) {
+  const out = { ...drink, changePct: priceChangePct(drink) };
+  if (role === "manager") {
+    const { floor, ceiling, floorSource } = clampToLegalRange(drink.currentPrice, drink.listPrice, drink.wholesalePrice);
+    return { ...out, floor, ceiling, floorSource };
+  }
+  delete out.wholesalePrice;
+  return out;
 }

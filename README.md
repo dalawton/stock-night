@@ -80,13 +80,21 @@ stock-night/
         └── pages/            Display.jsx, Admin.jsx, Login.jsx
 ```
 
-Reads (`GET /api/drinks`, history) are public and unauthenticated — the
-display board is a TV, nobody's logging into it. Every write goes through
-Express, which is what applies the compliance clamp and writes the audit
-trail; clients can never write to `drinks` directly (see
-`database.rules.json` — everything except `drinks`/`drinkHistory` reads is
-locked to server-only access via the Admin SDK, which bypasses these rules
-entirely).
+**Nothing is public.** Every API route except `/api/health` requires a signed-in
+account, reads included, and the RTDB rules block all direct client reads.
+The TV signs in once with a read-only **`display`** account (it can see the
+board but can't record sales or open `/admin`); Firebase keeps it signed in.
+Wholesale cost and the computed floor are only sent to managers - bartenders
+and the display never receive them. Every write goes through Express, which
+applies the compliance clamp and writes the audit trail.
+
+Create the TV account with:
+```bash
+cd server
+node scripts/createStaff.js tv@thebar.com "somePassword123" display
+```
+After changing `database.rules.json`, redeploy the rules:
+`firebase deploy --only database` (from the project root).
 
 ## Local development
 

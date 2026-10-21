@@ -6,7 +6,14 @@
 import admin from "firebase-admin";
 import { httpError } from "./errors.js";
 
-const ROLE_RANK = { bartender: 1, manager: 2 };
+// display = the read-only TV account (can view the board, nothing else)
+const ROLE_RANK = { display: 1, bartender: 2, manager: 3 };
+
+// Role lookups hit the database; the display polls every few seconds, so
+// remember a role for a short time. Short enough that revoking access still
+// takes effect within seconds.
+const ROLE_CACHE_MS = 15000;
+const roleCache = new Map(); // uid -> { role, at }
 
 let devWarned = false;
 
@@ -14,7 +21,7 @@ function firebaseReady() {
   return admin.apps.length > 0;
 }
 
-export function requireAuth(minRole = "bartender") {
+export function requireAuth(minRole = "display") {
   return async (req, res, next) => {
     try {
       if (!firebaseReady()) {
@@ -33,8 +40,14 @@ export function requireAuth(minRole = "bartender") {
       if (!token) throw httpError(401, "Missing Authorization header");
 
       const decoded = await admin.auth().verifyIdToken(token);
-      const roleSnap = await admin.database().ref(`staff/${decoded.uid}/role`).get();
-      const role = roleSnap.val();
+      let role;
+      const cached = roleCache.get(decoded.uid);
+      if (cached && Date.now() - cached.at < ROLE_CACHE_MS) {
+        role = cached.role;
+      } else {
+        role = (await admin.database().ref(`staff/${decoded.uid}/role`).get()).val();
+        roleCache.set(decoded.uid, { role, at: Date.now() });
+      }
 
       if (!role || !(role in ROLE_RANK)) {
         throw httpError(403, "No staff role assigned to this account. Ask a manager to add you (see scripts/createStaff.js).");
