@@ -175,9 +175,9 @@ export default function Admin() {
           <tbody>
             {drinks.map((d) => (
               <tr key={d.id} className={!d.active ? "is-inactive" : ""}>
-                <td>{d.name}</td>
+                <td className="c-name">{d.name}</td>
                 {editingId === d.id ? (
-                  <td colSpan={2}>
+                  <td colSpan={2} className="c-edit">
                     <div className="edit-price">
                       <input
                         type="number"
@@ -206,7 +206,7 @@ export default function Admin() {
                   </td>
                 ) : (
                   <>
-                    <td>
+                    <td className="c-meta" data-label="List">
                       {isManager ? (
                         <button className="btn-ghost" onClick={() => startEdit(d)}>
                           ${d.listPrice.toFixed(2)}
@@ -215,21 +215,21 @@ export default function Admin() {
                         <span>${d.listPrice.toFixed(2)}</span>
                       )}
                     </td>
-                    {isManager && <td>{d.wholesalePrice ? `$${d.wholesalePrice.toFixed(2)}` : "—"}</td>}
+                    {isManager && <td className="c-meta" data-label="Cost">{d.wholesalePrice ? `$${d.wholesalePrice.toFixed(2)}` : "—"}</td>}
                   </>
                 )}
-                <td>${d.currentPrice.toFixed(2)}</td>
+                <td className="c-current">${d.currentPrice.toFixed(2)}</td>
                 {isManager && (
-                  <td title={d.floorSource === "cost" ? "cost floor" : "legal floor"}>
+                  <td className="c-meta" data-label="Floor" title={d.floorSource === "cost" ? "cost floor" : "legal floor"}>
                     ${(d.floor ?? Math.max(d.listPrice * 0.5, d.wholesalePrice || 0)).toFixed(2)}
                   </td>
                 )}
-                <td className={d.changePct >= 0 ? "is-up" : "is-down"}>
+                <td className={`c-change ${d.changePct >= 0 ? "is-up" : "is-down"}`}>
                   {d.changePct >= 0 ? "▲" : "▼"} {Math.abs(d.changePct)}%
                 </td>
-                <td>{d.salesCount}</td>
-                <td>{d.active ? "live" : "86'd"}</td>
-                <td className="row-actions">
+                <td className="c-meta" data-label="Sales">{d.salesCount}</td>
+                <td className="c-status">{d.active ? "live" : "86'd"}</td>
+                <td className="row-actions c-actions">
                   <button onClick={() => handleSale(d.id)} disabled={!d.active}>
                     Sold one
                   </button>

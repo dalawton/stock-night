@@ -573,3 +573,125 @@ button:disabled {
 .gate a {
   color: var(--amber);
 }
+
+/* ---------- Phone layout: each drink becomes a card ---------- */
+
+@media (max-width: 720px) {
+  .admin {
+    padding: 1rem 0.75rem 3rem;
+  }
+  .admin__header h1 {
+    font-size: 1.5rem;
+  }
+  .panel {
+    padding: 1rem;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+  .drink-table,
+  .drink-table tbody {
+    display: block;
+  }
+  .drink-table thead {
+    display: none; /* labels are shown inline on each card instead */
+  }
+
+  .drink-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 1rem;
+    align-items: center;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.9rem;
+  }
+  .drink-table td {
+    display: block;
+    border: none;
+    padding: 0;
+    white-space: normal;
+  }
+
+  /* top: name | big current price; then change | status; then details;
+     then the action buttons last */
+  .c-name {
+    order: 1;
+    font-size: 1.25rem;
+  }
+  .c-current {
+    order: 2;
+    justify-self: end;
+    font-size: 1.7rem;
+    font-weight: 700;
+  }
+  .c-change {
+    order: 3;
+    font-weight: 700;
+  }
+  .c-status {
+    order: 4;
+    justify-self: end;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+  .c-meta {
+    order: 5;
+    display: flex !important;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    padding-top: 0.35rem !important;
+    border-top: 1px solid var(--border) !important;
+  }
+  .c-meta::before {
+    content: attr(data-label);
+    font-family: var(--sans);
+  }
+  .c-meta .btn-ghost {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  .c-edit {
+    order: 5;
+    grid-column: 1 / -1;
+  }
+  .c-actions {
+    order: 9;
+    grid-column: 1 / -1;
+    margin-top: 0.4rem;
+  }
+
+  /* "Sold one" fills the card width: easy to hit with a thumb mid-shift */
+  .row-actions > button:first-child {
+    flex: 1 1 100%;
+    min-height: 3.6rem;
+    font-size: 1.3rem;
+  }
+  .row-actions > .btn-ghost {
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+  }
+
+  .edit-price input,
+  .edit-price input:last-of-type {
+    width: 100%;
+  }
+  .edit-price button {
+    flex: 1 1 40%;
+    min-height: 2.75rem;
+  }
+
+  .drink-table .empty-row {
+    grid-column: 1 / -1;
+  }
+
+  .audit-list__time,
+  .audit-list__type {
+    min-width: 0;
+  }
+}
